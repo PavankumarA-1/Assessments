@@ -1,0 +1,82 @@
+1.
+select CustomerId ,sum(dataused) as total from customerinteractions
+where Month='March' and year=2024 
+group by customerid 
+having total> (select avg(b.dataused) from customerinteractions b where month='March' and year=2024);
+2.
+create or replace view callduration_march(id,duration) 
+as select customerid,sum(CallDuration) from customerinteractions
+where month='March' and year=2024 group  by customerid;
+create or replace view callduration_feb(id,duration) 
+as select customerid,sum(CallDuration) from customerinteractions
+where month='February' and year=2024 group  by customerid;
+select callduration_march.id as customerid from callduration_feb,callduration_march
+where callduration_march.id=callduration_feb.id and callduration_march.Duration>callduration_feb.Duration;
+
+3.
+create or replace view msg_feb(id,msg,dataused) 
+as select customerid,sum(MessageCount),sum(DataUsed) from customerinteractions
+where month='February' and year=2024 group  by customerid;
+create or replace view msg_mar(id,msg,dataused) 
+as select customerid,sum(MessageCount),sum(DataUsed) from customerinteractions
+where month='March' and year=2024 group  by customerid;
+select m.id from msg_mar m , msg_feb f
+where m.id=f.id and m.msg<f.msg and m.dataused> f.dataused;
+
+4.
+select sum(totalsalesamount),sum(unitssold) from quarterlysales
+where ProductTypeID=1
+group by ProductTypeID;
+
+5.
+select productTypeid, (sum(totalsalesamount)) from quarterlysales
+where Quarter='Q1' and year=2024
+group by ProductTypeID
+limit 1;
+
+6.
+select (sum(totalsalesamount)/sum(unitssold)) from quarterlysales
+where Quarter='Q2' and year=2024 and ProductTypeID=1
+group by ProductTypeID;
+
+7.
+select Region from sectorenergyconsumption
+where EnergySource  in("Solar",'Wind') and month="March" and year=2024
+group by EnergySource,region
+having sum(consumptionkwh)>avg(consumptionkwh);
+
+8.
+create or replace view enery_m(sector,useage) 
+as select sector,sum(consumptionkwh) from sectorenergyconsumption
+where month='March' and year=2024 group  by sector;
+create or replace view enery_f(sector,useage) 
+as select sector,sum(consumptionkwh) from sectorenergyconsumption
+where month='February' and year=2024 group  by Sector;
+select m.sector as sector from enery_f f,enery_m m
+where f.sector=m.sector and m.useage>f.useage;
+
+9.
+select "renuable" as soucre,sum(consumptionkwh) from sectorenergyconsumption
+where  EnergySource  in("Solar",'Wind') and  month='February' and year=2024
+union
+select "non-renuable" as soucre,sum(consumptionkwh) from sectorenergyconsumption
+where  EnergySource not in("Solar",'Wind') and  month='February' and year=2024;
+
+10.
+
+
+11.
+select customername,sum(AnnualPremium) from insuranceactivities
+where Investigation="no" and FeedbackScore>7 and ClaimsCount>0
+group by CustomerName;
+
+12.
+select p,
+case 
+when a>9 then "good"
+when a>7 then "average"
+else "bad"
+end as remark
+from(
+select policytype as p,avg(feedbackscore) as a from insuranceactivities 
+group by PolicyType) As s;
