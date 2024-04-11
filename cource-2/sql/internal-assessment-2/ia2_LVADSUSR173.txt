@@ -1,0 +1,73 @@
+1.
+select machine_id,sum(cost)as total_cost from l1_maintenance_records 
+where monthname(maintenance_date)='March' and year(maintenance_date)=2024
+group by machine_id
+having total_cost>(select avg(cost) from l1_maintenance_records
+where monthname(maintenance_date)='March' and year(maintenance_date));
+
+2.
+select r.maintenance_type from l1_maintenance_records r
+where monthname(r.maintenance_date)='March' and year(r.maintenance_date) 
+group by r.maintenance_type
+having count(r.maintenance_type)=(select p.c from (select l.maintenance_type as ty,count(*) c from l1_maintenance_records l
+where monthname(l.maintenance_date)='March' and year(l.maintenance_date)
+group by l.maintenance_type
+order by c desc limit 1) as p);
+
+3.
+create or replace view tech_view as
+select (select technician_name  from l1_maintenance_records
+where monthname(maintenance_date)='March' and year(maintenance_date)=2024
+group by technician_name 
+order by round(sum(cost)/count(technician_name),2) desc limit 1) as most_cost, 
+(select technician_name from l1_maintenance_records
+where monthname(maintenance_date)='March' and year(maintenance_date)=2024
+group by technician_name
+order by count(*) limit 1) as most_count;
+select * from tech_view;
+
+4.
+select product_id,round(avg(incident_count_pre_update-incident_count_post_update),2) as average_reduction from l2_updates
+group by product_id;
+
+5.
+select a.update_id,a.user_feedback_score-b.user_feedback_score as Improvement_star from l2_updates as a join l2_updates as b using (product_id) 
+where a.update_id<>b.update_id and  a.release_date>b.release_date  and a.user_feedback_score>b.user_feedback_score ;
+order by Improvement_star desc limit 1;
+
+6.
+select product_id,update_id,incident_count_pre_update-incident_count_post_update as improvement from l2_updates order by improvement limit 1;
+
+7.
+select p.patient_id,f.facility_name,v.reason_for_visit,t.outcome from l3_patients p join  l3_visits v on p.patient_id=v.patient_id  join l3_facilities f on v.facility_id=f.facility_id join l3_treatments t on t.visit_id=v.visit_id
+where monthname(v.visit_date)='MArch' and year(v.visit_date)=2024;
+
+8.
+select f.facility_name from l3_facilities f join  l3_visits v on f.facility_id=v.facility_id 
+where v.reason_for_visit="Emergency" 
+and monthname(v.visit_date)='March' and year(v.visit_date)=2024
+group by v.facility_id
+order by count(v.visit_id);
+
+9.
+select  p.insurance_provider,count(*) as count_of_case from l3_patients p join l3_visits v using(patient_id) join l3_treatments t on v.visit_id=t.visit_id
+where quarter(v.visit_date)=1 and year(v.visit_date)=2024 and t.outcome='Complicated' 
+group by  p.insurance_provider
+order by count_of_case desc limit 1;
+
+10.
+select p.category from  l4_stores s join l4_sales sa using (store_id) join l4_products p on p.product_id=sa.product_id
+where month(s.sale_date) and year(s.sale_date)=2024
+group by p.category;
+
+11.
+create or replace view  sales_view as 
+select s.region,sa.sale_date,sa.sale_id,p.price,sa.quantity from l4_stores s join l4_sales sa using (store_id) join l4_products p on p.product_id=sa.product_id;
+
+select region,sum(quantity*price) as sale from sales_view
+where quarter(sale_date)=1 and year(sale_date)=2024
+group by region
+order by sale desc limit 1;
+
+12.
+na
