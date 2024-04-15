@@ -1,0 +1,142 @@
+-- 1 
+select p.product_category,avg(s.sales_amount) 
+from sales_records s join products p using(product_id) 
+where s.sales_date>date_sub(curdate(),interval 30 day )
+group by p.product_category;
+
+
+-- 2
+with cte as(
+select product_id,sum(sales_amount) as total
+ from sales_records
+ where year(curdate())=year(sales_date)
+ group by product_id)
+ select product_id, total , 
+rank() over (order by total desc) as rn
+from cte
+limit 3;
+
+-- 3
+select customer_id,sum(sales_amount),
+cume_dist() over (order by sum(sales_amount)),-- each person contribution
+rank() over (order by sum(sales_amount) desc) as rn
+ from sales_records group  by customer_id ;
+ 
+ -- 4 
+select customer_id;
+with cte as(
+select customer_id,count(distinct month(sales_date)) as c from sales_records
+where sales_date>=date_sub(curdate(),interval 6 month)
+group by customer_id)
+select customer_id,
+case 
+when c>=4 then 'consistant buyer'
+else 'occational buyer'
+end  as clasification
+from cte;
+
+-- 5
+select departure_airport,arrival_airport,round(avg(base_price),2) as avg_price from flights
+group by departure_airport,arrival_airport;
+
+-- 6
+select f.flight_number,f.departure_date,count(t.ticket_id)as ticket, sum(t.ticket_price) as t_price from tickets t join flights f using ( flight_id)
+group by f.flight_number,f.departure_date
+order by t_price desc;
+
+-- 7
+select p.passenger_name,sum(t.ticket_price) as spend,p.frequent_flyer_status 
+from tickets t join passengers p using(passenger_id)
+group by p.passenger_name,p.frequent_flyer_status 
+order by spend desc
+limit 5;
+
+-- 8
+select  monthname(ticket_date) as month,count(ticket_id) as ticket_sold from tickets
+group by month
+order by ticket_sold desc
+limit 1;
+
+-- 9
+select g.game_genre,s.player_id, avg(datediff(s.play_date,p.registration_date)*24*60) 
+from games g join playerscores s using(game_id) join players p on (p.player_id=s.player_id) 
+group by game_genre,player_id;
+
+
+-- 10
+select p.game_id,g.game_name,count(distinct p.player_id) as num_player 
+from playerscores p join games g using (game_id)
+group by game_id
+order by num_player desc;
+
+-- 11
+select p.game_id,g.game_name,avg(p.score) as avg_score,max(p.score) as max_score,count(p.player_id) as player_count
+from playerscores p join games g using(game_id)
+group by game_id;
+
+-- 12
+with cte as(
+select player_id,player_name,registration_date,play_date,
+first_value(play_date) over(partition by player_id order by play_date desc) as lp
+from playerscores s join players p
+using(player_id))
+select player_id,player_name,registration_date,play_date 
+from cte where lp<date_sub(current_date,interval 30 day)
+and lp=play_date;
+
+-- 13
+select t.doctor_id,d.doctor_name,sum(t.cost) as t_cost 
+from doctors d join treatments t using (doctor_id)
+group by t.doctor_id
+order by t_cost desc 
+limit 5;
+
+-- 14
+set @cost= (Select sum(cost) from treatments);
+select treatment_name,sum(cost),(sum(cost)/(@cost))*100 from treatments
+group by treatment_name;
+
+-- 15
+with cte as(
+select patient_id , patient_name,admission_date,discharge_date,
+lag(admission_date) over ( partition by patient_id order by admission_date asc) as ra
+ from patients)
+ select patient_id , patient_name,admission_date,discharge_date from cte 
+ where ra is not null 
+ and datediff(admission_date,ra)<30
+ order by admission_date;
+
+ -- 16
+ select gender,diagnosis,round(avg(datediff(discharge_date,admission_date))) as los
+ from patients
+ group by gender,diagnosis;
+
+ -- 17
+ select c.department,e.semester,avg(e.grade) 
+ from courses c join enrollments e using(course_id)
+ group by c.department,e.semester
+ order by department,semester;
+
+ -- 18 
+ select major,count(student_id) as no_students,enrollment_year from students
+ group by major,enrollment_year
+ order by no_students desc
+ limit 5;
+
+ -- 19
+ select e.student_id,s.student_name,e.semester,sum(c.credits) as total_credit 
+ from enrollments e join students s on(e.student_id=s.student_id)  
+ join courses c on(e.course_id=c.course_id)
+ group by e.student_id,e.semester
+ having total_credit>=50;
+
+-- 20
+ with cte as(
+ select c.course_name,s.enrollment_year,count(e.student_id) as count,
+ rank() over (partition by c.course_name,s.enrollment_year order by count(e.student_id) desc) as rn
+ from students s join enrollments e using(student_id) join courses c using(course_id)
+ group by c.course_name,s.enrollment_year)
+ select course_name,enrollment_year,count
+ from cte 
+ where rn<4
+ order by count desc;
